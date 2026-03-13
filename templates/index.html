@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AgroAI Location Test</title>
+</head>
+
+<body>
+
+<h2>AgroAI Climate Test</h2>
+
+<button onclick="getLocation()">Send Location</button>
+
+<div id="result"></div>
+
+<script>
+
+function getLocation(){
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+let lat = position.coords.latitude
+let lon = position.coords.longitude
+
+fetch("/location",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+lat:lat,
+lon:lon
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+document.getElementById("result").innerHTML = `
+<p>Temperature: ${data.weather.temperature} °C</p>
+<p>Humidity: ${data.weather.humidity} %</p>
+<p>City: ${data.weather.city}</p>
+<p><b>${data.recommendation}</b></p>
+`
+
+})
+
+})
+
+}
+
+</script>
+
+</body>
+</html>
