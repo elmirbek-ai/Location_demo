@@ -1,53 +1,143 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ky">
 <head>
-<title>AgroAI Location Test</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroAI — Климаттык жардамчы</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #eef6ee;
+      color: #16351f;
+    }
+    main {
+      width: min(92vw, 560px);
+      padding: 2rem;
+      border-radius: 1rem;
+      background: #fff;
+      box-shadow: 0 1rem 2.5rem rgba(22, 53, 31, 0.12);
+    }
+    button {
+      border: 0;
+      border-radius: 0.65rem;
+      padding: 0.85rem 1.2rem;
+      background: #237a3b;
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+    #result {
+      margin-top: 1.25rem;
+    }
+    .error {
+      color: #a32020;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #102218; color: #e7f5e9; }
+      main { background: #183522; }
+    }
+  </style>
 </head>
-
 <body>
+  <main>
+    <h1>AgroAI климаттык жардамчы</h1>
+    <p>Жайгашкан жериңиз боюнча аба ырайын жана өсүмдүккө сунушту алыңыз.</p>
+    <button id="location-button" type="button">Жайгашкан жеримди колдонуу</button>
+    <div id="result" role="status" aria-live="polite"></div>
+  </main>
 
-<h2>AgroAI Climate Test</h2>
+  <script>
+    const button = document.getElementById("location-button");
+    const result = document.getElementById("result");
 
-<button onclick="getLocation()">Send Location</button>
+    function showMessage(message, isError = false) {
+      result.replaceChildren();
+      const paragraph = document.createElement("p");
+      paragraph.textContent = message;
+      paragraph.className = isError ? "error" : "";
+      result.append(paragraph);
+    }
 
-<div id="result"></div>
+    function addWeatherRow(label, value) {
+      const paragraph = document.createElement("p");
+      const title = document.createElement("strong");
+      title.textContent = `${label}: `;
+      paragraph.append(title, document.createTextNode(String(value)));
+      result.append(paragraph);
+    }
 
-<script>
+    function renderWeather(data) {
+      result.replaceChildren();
+      addWeatherRow("Температура", `${data.weather.temperature} °C`);
+      addWeatherRow("Нымдуулук", `${data.weather.humidity} %`);
+      addWeatherRow("Шаар", data.weather.city || "Белгисиз");
+      addWeatherRow("Сунуш", data.recommendation);
+    }
 
-function getLocation(){
+    async function sendCoordinates(position) {
+      try {
+        const response = await fetch("/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          }),
+        });
 
-navigator.geolocation.getCurrentPosition(function(position){
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = typeof data.detail === "string"
+            ? data.detail
+            : "Сервер суроону аткара алган жок.";
+          throw new Error(detail);
+        }
 
-let lat = position.coords.latitude
-let lon = position.coords.longitude
+        renderWeather(data);
+      } catch (error) {
+        showMessage(error.message || "Маалымат алуу мүмкүн болгон жок.", true);
+      } finally {
+        button.disabled = false;
+      }
+    }
 
-fetch("/location",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-lat:lat,
-lon:lon
-})
-})
-.then(res=>res.json())
-.then(data=>{
+    function handleLocationError(error) {
+      const messages = {
+        1: "Жайгашкан жерди колдонууга уруксат берилген жок.",
+        2: "Жайгашкан жерди аныктоо мүмкүн болгон жок.",
+        3: "Жайгашкан жерди аныктоо убактысы бүттү.",
+      };
+      showMessage(messages[error.code] || "Геолокация катасы чыкты.", true);
+      button.disabled = false;
+    }
 
-document.getElementById("result").innerHTML = `
-<p>Temperature: ${data.weather.temperature} °C</p>
-<p>Humidity: ${data.weather.humidity} %</p>
-<p>City: ${data.weather.city}</p>
-<p><b>${data.recommendation}</b></p>
-`
+    function requestLocation() {
+      if (!navigator.geolocation) {
+        showMessage("Бул браузер геолокацияны колдобойт.", true);
+        return;
+      }
 
-})
+      button.disabled = true;
+      showMessage("Жайгашкан жер аныкталууда…");
+      navigator.geolocation.getCurrentPosition(
+        sendCoordinates,
+        handleLocationError,
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+      );
+    }
 
-})
-
-}
-
-</script>
-
+    button.addEventListener("click", requestLocation);
+  </script>
 </body>
 </html>

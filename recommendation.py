@@ -1,21 +1,34 @@
-def recommend(weather):
+from collections.abc import Mapping
 
-    temp = weather.get("temperature")
+
+def recommend(weather: Mapping[str, object]) -> str:
+    temperature = weather.get("temperature")
     humidity = weather.get("humidity")
 
-    if temp is None or humidity is None:
+    if not isinstance(temperature, (int, float)) or not isinstance(
+        humidity,
+        (int, float),
+    ):
         return "Климат маалыматтары жеткиликтүү эмес."
 
+    recommendations: list[str] = []
+
     if humidity > 80:
-        return "Нымдуулук өтө жогору. Грибок оорулары чыгуу коркунучу бар."
+        recommendations.append(
+            "Нымдуулук өтө жогору. Грибок оорулары чыгуу коркунучу бар."
+        )
+    elif humidity > 70:
+        recommendations.append(
+            "Жогорку нымдуулук. Фунгицид колдонуу сунушталат."
+        )
 
-    if humidity > 70:
-        return "Жогорку нымдуулук. Фунгицид колдонуу сунушталат."
+    if temperature > 30:
+        recommendations.append(
+            "Температура жогору. Өсүмдүктү көбүрөөк сугаруу керек."
+        )
+    elif temperature < 5:
+        recommendations.append(
+            "Температура өтө төмөн. Өсүмдүктү сууктан коргоо керек."
+        )
 
-    if temp > 30:
-        return "Температура жогору. Өсүмдүктү көбүрөөк сугаруу керек."
-
-    if temp < 5:
-        return "Температура өтө төмөн. Өсүмдүктү сууктан коргоо керек."
-
-    return "Климат нормалдуу."
+    return " ".join(recommendations) or "Климат нормалдуу."
